@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AssistTech - Soluções de Acessibilidade</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        lavender: '#E6E6FA',
+                        brightPurple: '#8A2BE2',
+                        vividPink: '#FF1493',
+                        electricBlue: '#00BFFF',
+                        sunnyYellow: '#FFD700',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
+        body {
+            font-family: 'Poppins', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-lavender min-h-screen flex flex-col">
+    <header class="bg-gradient-to-r from-brightPurple to-vividPink text-white p-6 shadow-lg">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-3xl font-bold">AssistTech</h1>
+            <nav>
+                <ul class="flex space-x-6">
+                    <li><a href="#" class="hover:text-sunnyYellow transition duration-300">Início</a></li>
+                    <li><a href="#" class="hover:text-sunnyYellow transition duration-300">Sobre Nós</a></li>
+                    <li><a href="#" class="hover:text-sunnyYellow transition duration-300">Contato</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container mx-auto p-8 flex-grow flex flex-col">
+        <section class="mb-8 bg-white rounded-lg shadow-lg p-6 transform hover:scale-105 transition duration-300">
+            <h2 class="text-2xl font-semibold mb-4 text-brightPurple">Assistente de Acessibilidade</h2>
+            <p class="mb-4 text-gray-700">Bem-vindo ao nosso assistente virtual especializado em soluções de acessibilidade para o ambiente de trabalho. Faça perguntas sobre tecnologias assistivas, adaptações no local de trabalho ou políticas de inclusão.</p>
+        </section>
+
+        <div id="chat-container" class="bg-white p-6 rounded-lg shadow-lg flex-grow flex flex-col">
+            <div id="chat-messages" class="flex-grow overflow-y-auto mb-4 p-4 bg-gray-100 rounded-lg"></div>
+            <div class="flex">
+                <input id="user-input" type="text" class="flex-grow p-3 border-2 border-electricBlue rounded-l-lg focus:outline-none focus:ring-2 focus:ring-electricBlue" placeholder="Digite sua pergunta sobre acessibilidade...">
+                <button id="send-button" class="bg-electricBlue text-white p-3 rounded-r-lg hover:bg-brightPurple transition duration-300">
+                    <i class="fas fa-paper-plane mr-2"></i>Enviar
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <footer class="bg-gradient-to-r from-vividPink to-brightPurple text-white p-4 mt-8">
+        <div class="container mx-auto text-center">
+            <p>&copy; 2024 AssistTech. Todos os direitos reservados.</p>
+        </div>
+    </footer>
+
+    <script>
+        const systemPrompt = `Você é um assistente especializado em fornecer informações sobre tecnologias de acessibilidade e soluções para funcionários com deficiências visuais e auditivas no ambiente de trabalho. Forneça respostas detalhadas, citando ferramentas específicas e exemplos práticos de implementação. Foque em soluções digitais e tecnológicas atuais.`;
+
+        const apiKey = 'ee05a2bec3ac415ea8bda6c29905a1b7';
+        const apiUrl = 'https://eliza-m2du9mk6-westeurope.openai.azure.com/openai/deployments/gpt-35-turbo/chat/completions?api-version=2024-08-01-preview';
+
+        const chatMessages = document.getElementById('chat-messages');
+        const userInput = document.getElementById('user-input');
+        const sendButton = document.getElementById('send-button');
+
+        let conversationHistory = [
+            { role: 'system', content: systemPrompt }
+        ];
+
+        function addMessageToChat(role, content) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `mb-4 ${role === 'user' ? 'text-right' : 'text-left'}`;
+            const bubble = document.createElement('div');
+            bubble.className = `inline-block p-3 rounded-lg ${role === 'user' ? 'bg-electricBlue text-white' : 'bg-sunnyYellow text-gray-800'} shadow-md`;
+            bubble.innerHTML = `<p class="text-sm">${content}</p>`;
+            messageDiv.appendChild(bubble);
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const userMessage = userInput.value.trim();
+            if (!userMessage) return;
+
+            addMessageToChat('user', userMessage);
+            userInput.value = '';
+            sendButton.disabled = true;
+            sendButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Enviando...';
+
+            conversationHistory.push({ role: 'user', content: userMessage });
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'api-key': apiKey
+                    },
+                    body: JSON.stringify({
+                        messages: conversationHistory,
+                        max_tokens: 800,
+                        temperature: 0.7,
+                        top_p: 0.95,
+                        frequency_penalty: 0,
+                        presence_penalty: 0
+                    })
+                });
+
+                const data = await response.json();
+                const assistantReply = data.choices[0].message.content;
+
+                addMessageToChat('assistant', assistantReply);
+                conversationHistory.push({ role: 'assistant', content: assistantReply });
+
+                if (conversationHistory.length > 11) {
+                    conversationHistory = [
+                        conversationHistory[0],
+                        ...conversationHistory.slice(-10)
+                    ];
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                addMessageToChat('assistant', 'Desculpe, ocorreu um erro ao processar sua mensagem. Por favor, tente novamente mais tarde.');
+            } finally {
+                sendButton.disabled = false;
+                sendButton.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>Enviar';
+            }
+        }
+
+        sendButton.addEventListener('click', sendMessage);
+        userInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        // Mensagem de boas-vindas
+        addMessageToChat('assistant', 'Olá! Sou o assistente virtual da AssistTech. Como posso ajudar você hoje com informações sobre acessibilidade no ambiente de trabalho?');
+    </script>
+</body>
+</html>
